@@ -35,7 +35,7 @@ class Controller(object):
         )
         self.throttle = 0
         self.steering = 0.0
-        self.desired_distance = 1000
+        self.desired_distance = 500
         self.distance = self.desired_distance
         self.desired_angle = 0.0
         self.angle = self.desired_angle
@@ -51,7 +51,7 @@ class Controller(object):
             while not rospy.is_shutdown():
                 # calculate controller output of the throttle controller
                 self.throttle =self.pid_throttle.execute(
-                    self.desired_distance, self.distance, 1/ROSPY_RATE)
+                    self.desired_distance, self.distance, 1.0/ROSPY_RATE)
 
                 # add thresholds. smaller values wouldnt make the car move
                 if (self.throttle > 0):
@@ -73,7 +73,7 @@ class Controller(object):
                 if self.throttle > 0:
                     # calculate controller output of the steering angle controller
                     self.steering = self.pid_steering.execute(
-                        self.desired_angle, self.angle, 1/ROSPY_RATE
+                        self.desired_angle, self.angle, 1.0/ROSPY_RATE
                     )
 
                     # check for angle limits
@@ -98,7 +98,8 @@ class Controller(object):
     def point_rcv_callback(self, msg):
         point = (msg.point.x, msg.point.y, msg.point.z)
         self.distance = point[2]
-        self.angle = math.atan(point[0]/point[2])
+        self.angle = math.atan(point[0]/point[2])/math.pi*180
+        print("angle: {}".format(self.angle))
 
 
 
