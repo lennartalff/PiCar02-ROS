@@ -98,8 +98,8 @@ class Controller(object):
     def point_rcv_callback(self, msg):
         point = (msg.point.x, msg.point.y, msg.point.z)
         self.distance = point[2]
+        # calculate the angle to the tracking point in degree
         self.angle = math.atan(point[0]/point[2])/math.pi*180
-        print("angle: {}".format(self.angle))
 
 
 
