@@ -14,6 +14,7 @@ ANGLE_MIN = -20
 THROTTLE_MIN = -4095
 THROTTLE_MAX = 4095
 
+
 class MotorController(object):
     def __init__(self, freq=200, address=0x40):
         rospy.on_shutdown(self.on_shutdown_callback)
@@ -34,15 +35,14 @@ class MotorController(object):
         self.pwm.set_pwm(SERVO_CHANNEL, 0, 1228)
 
     def set_steering_angle(self, angle):
-        #PWM MAX: 3225
-        #PWM MIN: 2100
+        # PWM MAX: 3225
+        # PWM MIN: 2100
         if angle > ANGLE_MAX:
             angle = ANGLE_MAX
         if angle < ANGLE_MIN:
             angle = ANGLE_MIN
         self.pwm.set_pwm(SERVO_CHANNEL, 0, int(1228+(angle+1.14)/0.0755))
         print("Servo PWM: {}".format(int(1228+25*angle)))
-
 
     def set_throttle(self, throttle):
         if throttle > THROTTLE_MAX:
@@ -63,17 +63,20 @@ class MotorController(object):
 
     def throttle_callback(self, msg):
         self.set_throttle(msg.data)
+
     def on_shutdown_callback(self):
         self.set_throttle(0)
         self.set_steering_angle(0.0)
 
+
 def main():
     rospy.init_node('motor_control_node', anonymous=True)
-    motorController = MotorController()
+    motor_controller = MotorController()
     try:
         rospy.spin()
     except KeyboardInterrupt:
         print('Shutting down motor_control_node')
+
 
 if __name__ == '__main__':
     main()

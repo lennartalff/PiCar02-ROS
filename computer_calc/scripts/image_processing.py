@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
-import sys, time
+import sys
 
 import cv2
+
+
 import rospy
 import numpy as np
 from cv_bridge import CvBridge
@@ -21,10 +23,11 @@ CAMERA_ROTATION = np.mat([
     [0.0507, -0.2654, 0.9628]
 ])
 
+
 class ImageProcessor(object):
     def __init__(self):
         self.subscriber = rospy.Subscriber(
-            "/raspicam_node/image/compressed",
+            "/camera/image/compressed",
             CompressedImage,
             self.img_rcv_callback,
             queue_size=1,
@@ -35,24 +38,6 @@ class ImageProcessor(object):
             queue_size=1
         )
         self.br = CvBridge()
-        self.init_blob_detector()
-
-    def init_blob_detector(self):
-        params = cv2.SimpleBlobDetector_Params()
-
-        params.minThreshold = 0
-        params.maxThreshold = 255
-
-        params.filterByArea = True
-        params.minArea = 10
-
-        params.filterByCircularity = False
-        params.filterByConvexity = False
-        params.filterByInertia = False
-
-
-        self.blobDetector = cv2.SimpleBlobDetector_create(params)
-
 
     def img_rcv_callback(self, msg):
         img = self.br.compressed_imgmsg_to_cv2(msg)
@@ -61,50 +46,50 @@ class ImageProcessor(object):
         mask = self.color_detection(img)
         mask = self.refine_mask(mask)
         point_pixel = self.find_contours(mask)
-        if not point_pixel == None:
+        if point_pixel is not None:
             point_3d = self.pix2world(point_pixel, 360, 240, CAMERA_HEIGHT-155)
             msg = PointStamped()
             msg.header.stamp = rospy.Time.now()
             (msg.point.x, msg.point.y, msg.point.z) = point_3d.tolist()[0]
             self.publisher.publish(msg)
-        #self.detect_blobs(mask)
 
-    def color_detection(self, img_bgr,
-        lower_color_hsv=np.array([45, 30, 30]),
-        upper_color_hsv=np.array([85, 255, 255]) ):
+    @staticmethod
+    def color_detection(img_bgr,
+                        lower_color_hsv=np.array([45, 30, 30]),
+                        upper_color_hsv=np.array([85, 255, 255])):
         # For HSV, Hue range is [0,179], Saturation range is [0,255] and
         # Value range is [0,255]
         img_hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(img_hsv, lower_color_hsv, upper_color_hsv)
         return mask
 
-    def refine_mask(self, mask):
-        kernel = np.ones((5,5), np.uint8)
-        #mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    @staticmethod
+    def refine_mask(mask):
+        # kernel = np.ones((5,5), np.uint8)
         mask = cv2.erode(mask, None, iterations=2)
         mask = cv2.dilate(mask, None, iterations=2)
         cv2.imshow('cv_mask refined', mask)
         cv2.waitKey(1)
         return mask
 
-    def find_contours(self, mask):
+    @staticmethod
+    def find_contours(mask):
         cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
         center = None
 
         if len(cnts) > 0:
-    		# find the largest contour in the mask, then use
-    		# it to compute the minimum enclosing circle and
-    		# centroid
-    		c = max(cnts, key=cv2.contourArea)
-    		((x, y), radius) = cv2.minEnclosingCircle(c)
-    		M = cv2.moments(c)
-    		center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            # find the largest contour in the mask, then use
+            # it to compute the minimum enclosing circle and
+            # centroid
+            c = max(cnts, key=cv2.contourArea)
+            ((_, _), radius) = cv2.minEnclosingCircle(c)
+            m = cv2.moments(c)
+            center = (int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"]))
         return center
 
-    def pix2world(self, pt, u0, v0, h):
-        pixel_width = SENSOR_WIDTH/u0
-        pixel_height = SENSOR_HEIGHT/v0
+    @staticmethod
+    def pix2world(pt, u0, v0, h):
         pt_screen = np.array(pt)
         x_screen = (pt_screen - np.array([float(u0/2+0.5), float(v0/2+0.5)]))
         x_screen = np.array([x_screen[0], x_screen[1], 1.0])
@@ -112,16 +97,7 @@ class ImageProcessor(object):
         x_screen[1] = x_screen[1] / FOCAL_LENGTH_PIX
         x = CAMERA_ROTATION * np.transpose(np.mat(x_screen))
         x_world = (h/x[1]) * np.transpose(x)
-        return(x_world)
-
-    def detect_blobs(self, img):
-        img = 255-img
-        keyPoints = self.blobDetector.detect(img)
-        img_blob = cv2.drawKeypoints(img, keyPoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        cv2.imshow('Blobs', img_blob)
-        pts = [p.pt for p in keyPoints]
-        print(pts)
-        cv2.waitKey(1)
+        return x_world
 
 
 def main(args):
@@ -132,6 +108,7 @@ def main(args):
     except KeyboardInterrupt:
         print("Shutting down image_processing_node")
     cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     main(sys.argv)

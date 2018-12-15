@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import rospy
-import sys
 import math
 from std_msgs.msg import Int16, Float32
 from geometry_msgs.msg import PointStamped
@@ -12,6 +11,7 @@ MAX_THROTTLE = 4000
 MIN_THROTTLE = -4000
 MIN_STEERING = -20
 MAX_STEERING = 20
+
 
 class Controller(object):
 
@@ -41,8 +41,8 @@ class Controller(object):
         self.desired_angle = 0.0
         self.angle = self.desired_angle
 
-        self.pid_throttle = PID(K_P=10, K_I=0.0, K_D=1, threshold=10)
-        self.pid_steering = PID(K_P=1, threshold=0)
+        self.pid_throttle = PID(k_p=10, k_i=0.0, k_d=1, threshold=10)
+        self.pid_steering = PID(k_p=1, threshold=0)
         self.funnel_throttle = Funnel()
 
     def run(self):
@@ -51,15 +51,15 @@ class Controller(object):
         # run this loop forever
         while not rospy.is_shutdown():
             # calculate controller output of the throttle controller
-            self.throttle =self.pid_throttle.execute(
+            self.throttle = self.pid_throttle.execute(
                 self.desired_distance, self.distance, 1.0/ROSPY_RATE)
-            #self.throttle = self.funnel_throttle.execute(self.desired_distance, self.distance)
+            # self.throttle = self.funnel_throttle.execute(self.desired_distance, self.distance)
 
             print("Throttle: {}".format(self.throttle))
             # add thresholds. smaller values wouldnt make the car move
-            if (self.throttle > 0):
+            if self.throttle > 0:
                 self.throttle = self.throttle + FORWARD_THRESHOLD
-            elif (self.throttle < 0):
+            elif self.throttle < 0:
                 self.throttle = self.throttle - BACKWARD_THRESHOLD
 
             # check for throttle limits
@@ -109,12 +109,11 @@ class Controller(object):
         self.throttle_pub.publish(msg_throttle)
 
 
-
 class PID(object):
-    def __init__(self, K_P=1, K_I=0, K_D=0, threshold=100):
-        self.K_P = K_P
-        self.K_I = K_I
-        self.K_D = K_D
+    def __init__(self, k_p=1.0, k_i=0.0, k_d=0.0, threshold=100):
+        self.K_P = k_p
+        self.K_I = k_i
+        self.K_D = k_d
         self.integral = 0
         self.error_prior = 0
         self.threshold = threshold
@@ -129,20 +128,21 @@ class PID(object):
         self.error_prior = err
         return output
 
+
 class Funnel(object):
     def __init__(self):
         self.time = 0.0
+
     def execute(self, desired_value, actual_value):
         fun_value = self.funnel_fct(self.time)
         error = actual_value - desired_value
         output = 5.0/(1.0-fun_value*fun_value*error*error)*error
         self.time = self.time + 1.0/ROSPY_RATE
         return output
-    def funnel_fct(self, x):
+
+    @staticmethod
+    def funnel_fct(x):
         return math.e**(-100*x) * 10**15
-
-
-
 
 
 def main():
@@ -152,6 +152,7 @@ def main():
         controller.run()
     except rospy.ROSInterruptException:
         print("Shutting down controller_node")
+
 
 if __name__ == '__main__':
     main()
