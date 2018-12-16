@@ -9,8 +9,6 @@ from sensor_msgs.msg import CompressedImage
 class FrameSplitter(object):
     def __init__(self):
         self.done = False
-        # Construct a pool of 4 image processors along with a lock
-        # to control access between threads
         self.publisher = rospy.Publisher(
             "/camera/image/compressed",
             CompressedImage,
@@ -20,6 +18,8 @@ class FrameSplitter(object):
         self.stream = io.BytesIO()
 
     def write(self, buf):
+        # JPEGs start with the magic number FF D8, so it is used to identify
+        # the beginning of a new frame
         if buf.startswith(b'\xff\xd8'):
             size = self.stream.tell()
             if size > 0:
@@ -35,7 +35,7 @@ class FrameSplitter(object):
 
 def main():
     rospy.init_node('camera_node', anonymous=True)
-    with PiCamera(resolution=(640, 480), framerate=40) as camera:
+    with PiCamera(resolution=(640, 480), framerate=30) as camera:
         camera.iso = 800
         time.sleep(2)
         camera.shutter_speed = camera.exposure_speed
@@ -49,10 +49,10 @@ def main():
             try:
                 camera.wait_recording(1)
             except KeyboardInterrupt:
-                print("Shuttding down by KeyboardInterrupt")
+                print("Shutting down by KeyboardInterrupt")
                 break
         camera.stop_recording()
-        print("Shuttding down camera node")
+        print("Shutting down camera node")
 
 
 if __name__ == '__main__':
