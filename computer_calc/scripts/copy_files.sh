@@ -1,3 +1,3 @@
 #! /bin/bash
 # copies raspi_nodes to the raspberry pi
-scp -r ../../computer_calc ubuntu@10.42.0.1:/home/ubuntu/catkin_ws/src
+scp -r ../../computer_calc pi@192.168.4.1:/home/pi/catkin_ws/src

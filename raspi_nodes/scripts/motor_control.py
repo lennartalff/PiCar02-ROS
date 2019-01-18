@@ -67,6 +67,7 @@ class MotorController(object):
     def on_shutdown_callback(self):
         self.set_throttle(0)
         self.set_steering_angle(0.0)
+        self.pwm.set_all_pwm(0, 0)
 
 
 def main():
