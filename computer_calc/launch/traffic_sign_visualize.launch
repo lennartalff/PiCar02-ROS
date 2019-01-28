@@ -1,0 +1,7 @@
+<launch>
+    <group ns="picar">
+        <node pkg="raspi_nodes" name="lane_follower" type="lane_follower.py" output="screen"/>
+        <node pkg="computer_calc" name="visualizer" type="visualize.py" output="screen"/>
+        <node pkg="computer_calc" name="control" type="controller_lane_follower_ts.py" output="screen"/>
+    </group>
+</launch>

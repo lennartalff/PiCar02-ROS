@@ -2,6 +2,7 @@
 import rospy
 import Adafruit_PCA9685
 from std_msgs.msg import Float32, Int16
+import time
 
 SERVO_CHANNEL = 6
 MOTOR_FORWARD_CHANNEL = 11
@@ -9,8 +10,8 @@ MOTOR_BACKWARD_CHANNEL = 10
 IN_1_CHANNEL = 8    # BACKWARD
 IN_2_CHANNEL = 9    # FORWARD
 
-ANGLE_MAX = 20
-ANGLE_MIN = -20
+ANGLE_MAX = 30
+ANGLE_MIN = -ANGLE_MAX
 THROTTLE_MIN = -4095
 THROTTLE_MAX = 4095
 
@@ -33,6 +34,8 @@ class MotorController(object):
         self.pwm.set_pwm(IN_1_CHANNEL, 0, 4000)
         self.pwm.set_pwm(IN_2_CHANNEL, 0, 4000)
         self.pwm.set_pwm(SERVO_CHANNEL, 0, 1228)
+        self.timed_out = True
+        self.timer = rospy.Timer(rospy.Duration(0.1), self.msg_timeout_cb)
 
     def set_steering_angle(self, angle):
         # PWM MAX: 3225
@@ -62,13 +65,23 @@ class MotorController(object):
         self.set_steering_angle(msg.data)
 
     def throttle_callback(self, msg):
+        self.timed_out = False
         self.set_throttle(msg.data)
 
     def on_shutdown_callback(self):
+        print("motor_control on_shutdown_cb")
+        self.timer.shutdown()
         self.set_throttle(0)
+        time.sleep(0.3)
         self.set_steering_angle(0.0)
+        time.sleep(0.5)
         self.pwm.set_all_pwm(0, 0)
+        time.sleep(1)
 
+    def msg_timeout_cb(self, event):
+        if self.timed_out:
+            self.set_throttle(0)
+        self.timed_out = True
 
 def main():
     rospy.init_node('motor_control_node', anonymous=True)

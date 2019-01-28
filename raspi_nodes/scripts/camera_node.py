@@ -27,7 +27,10 @@ class FrameSplitter(object):
                 self.msg.data = self.stream.read(size)
                 self.msg.format = "jpeg"
                 self.msg.header.stamp = rospy.Time.now()
-                self.publisher.publish(self.msg)
+                try:
+                    self.publisher.publish(self.msg)
+                except rospy.ROSException:
+                    pass
                 self.stream.seek(0)
                 self.stream.truncate()
         self.stream.write(buf)
@@ -35,14 +38,19 @@ class FrameSplitter(object):
 
 def main():
     rospy.init_node('camera_node', anonymous=True)
-    with PiCamera(resolution=(640, 480), framerate=30) as camera:
+    camera_settings = rospy.get_param("camera_settings")
+    with PiCamera(resolution=(camera_settings["width"], camera_settings["height"]), framerate=camera_settings["framerate"]) as camera:
         camera.iso = 800
+        camera.vflip = True
+        camera.hflip = True
         time.sleep(2)
         camera.shutter_speed = camera.exposure_speed
         camera.exposure_mode = 'off'
         g = camera.awb_gains
         camera.awb_mode = 'off'
         camera.awb_gains = g
+        if camera_settings["racemode"] == 1:
+            camera.zoom = (0.0, 0.0, 1.0, 1.0)
         output = FrameSplitter()
         camera.start_recording(output, format='mjpeg')
         while not rospy.is_shutdown():

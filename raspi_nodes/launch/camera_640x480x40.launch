@@ -1,0 +1,14 @@
+<launch>
+    <group ns="picar">
+        <group ns="camera_settings">
+            <param name="width" value="640"/>
+            <param name="height" value="480"/>
+            <param name="framerate" value="40"/>
+            <param name="racemode" value="0"/>
+        </group>
+
+        <node pkg="raspi_nodes" name="camera_node" type="camera_node.py" output="screen"/>
+        <node pkg="raspi_nodes" name="motor_control" type="motor_control.py" output="screen"/>
+    </group>
+
+</launch>
