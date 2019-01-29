@@ -7,6 +7,7 @@ from raspi_nodes.msg import LaneFollowerMsg
 from sensor_msgs.msg import CompressedImage
 import time
 import os
+import uuid
 
 TEXT_HEIGHT = 100
 
@@ -90,8 +91,8 @@ class Visualizer(object):
         cv2.rectangle(img, (ts_x, ts_y), (ts_x+ts_w, ts_y+ts_h), (0, 255, 0), 2)
         if ts_w > 0 and (self.counter % 1 == 0):
             self.nrImages = self.nrImages + 1
-            # print(self.nrImages)
-            # cv2.imwrite("img_ts_dl{:04d}.jpg".format(self.nrImages), img[ts_y:ts_y+ts_h, ts_x:ts_x+ts_w])
+            print(self.nrImages)
+            cv2.imwrite("img_ts_mixed{:04d}-{}.jpg".format(self.nrImages, uuid.uuid4()), img[ts_y:ts_y+ts_h, ts_x:ts_x+ts_w])
         cv2.circle(img, target_point, 10, (255, 0, 0), 2)
         for i in lower_lane_boundaries:
             cv2.circle(img, (i, lower_slice_row_idx), 10, (255, 255, 0), 2)

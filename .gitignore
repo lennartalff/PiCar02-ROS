@@ -1,3 +1,6 @@
 .kdev4/
 .idea/
 src.kdev4
+computer_calc/scripts/neuronal_network_traffic_sign.py
+computer_calc/scripts/train_existing_neuronal_network.py
+computer_calc/scripts/model.py

@@ -70,7 +70,7 @@ class TrafficSign(Rectangle):
 class LaneFollower(object):
     def __init__(self, width, height, nn):
         self.nn = nn
-        self.nn_model = load_trained_model("/home/lennartalff/catkin_ws/src/computer_calc/scripts/2500_initial_softmax.h5")
+        self.nn_model = load_trained_model("/home/lennartalff/catkin_ws/src/computer_calc/scripts/dl_initial_softmax.h5")
         self.train_datagen = ImageDataGenerator(
             rescale=1. / 255,
             shear_range=0.2,
@@ -126,6 +126,7 @@ class LaneFollower(object):
         self.ts = TrafficSign()
         # flag that indicates whether a stop sign was registered and the car should stop at the next line
         self.stop_registered = False
+        self.stop = False
         self.crossing_detected_old = False
         self.crossing_detected = False
         self.crossing_detected_debounce = 0x00
@@ -195,9 +196,13 @@ class LaneFollower(object):
                 self.pub_control_speed.publish(msg)
             except rospy.ROSException:
                 pass
-            time.sleep(5)
+            rospy.Timer(rospy.Duration(5), self.stop_timeout_cb, True)
             self.stop_registered = False
-        msg.data = self.speed
+            self.stop = True
+        if self.stop:
+            msg.data = 0
+        else:
+            msg.data = self.speed
         try:
             self.pub_control_speed.publish(msg)
         except rospy.ROSException:
@@ -315,7 +320,8 @@ class LaneFollower(object):
             contour = max(contours, key=cv2.contourArea)
             if cv2.contourArea(contour) > (self.IMG_WIDTH*self.IMG_HEIGHT/256):
                 self.ts.x, self.ts.y, self.ts.w, self.ts.h = cv2.boundingRect(contour)
-                if abs(1-float(self.ts.h)/self.ts.w) < 0.3:
+                print(self.ts.w, self.ts.h)
+                if abs(1-float(self.ts.h)/self.ts.w) < 0.3 and self.ts.w > 80 and self.ts.h > 80:
                     if self.nn:
                         self.identify_nn(img[self.ts.y:self.ts.y+self.ts.h, self.ts.x:self.ts.x+self.ts.w])
                     else:
@@ -456,6 +462,10 @@ class LaneFollower(object):
             else:
                 self.ts.ts_type = None
 
+    def stop_timeout_cb(self, event):
+        self.stop = False
+
+
 
 def create_model():
     img_width, img_height = 60, 60
@@ -492,6 +502,7 @@ def create_model():
     return model
 
 
+
 def load_trained_model(path):
     model = create_model()
     model.load_weights(path)
@@ -502,7 +513,7 @@ def load_trained_model(path):
 def main():
     rospy.init_node("lane_follower_node")
     camera_settings = rospy.get_param("camera_settings")
-    LaneFollower(width=camera_settings["width"], height=camera_settings["height"], nn=True)
+    LaneFollower(width=camera_settings["width"], height=camera_settings["height"], nn=False)
     try:
         rospy.spin()
     except KeyboardInterrupt:
