@@ -133,7 +133,7 @@ class LaneFollower(object):
         self.nrDebounce = 0x03
 
         # status variable that indicates the movement direction
-        self.direction = DIR_RIGHT
+        self.direction = DIR_LEFT
         # status variable that sets the car's speed
         self.speed = SPEED_0
 
